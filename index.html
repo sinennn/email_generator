@@ -70,6 +70,20 @@
             margin-bottom: 8px;
         }
 
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         .login-box p {
             color: var(--subtext);
             font-size: 0.9rem;
@@ -351,7 +365,7 @@
             <input type="email" id="email" placeholder="username@domain.com"
                    required autocomplete="email" inputmode="email">
 
-            <button class="btn-full" onclick="handleLogin()">Access Inbox</button>
+            <button class="btn-full" id="loginBtn" onclick="handleLogin()">Access Inbox</button>
         </div>
 
         <div id="inboxView" class="mail-box">
@@ -424,37 +438,43 @@
     }
 
     async function handleLogin() {
-        const address = document.getElementById('email').value.trim();
-        if(!address) return alert("Please enter an email address.");
+    const address = document.getElementById('email').value.trim();
+    if (!address) return alert("Please enter an email address.");
 
-        try {
-            console.log(`Attempting login for: ${address}`);
-            console.log(`API endpoint: ${API}/token`);
-            let res = await fetch(`${API}/token`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ address: address, password: MASTER_PASSWORD })
-            });
+    const btn = document.getElementById('loginBtn');
 
-            console.log(`Response status: ${res.status}`);
-            if(!res.ok) {
-                const errorData = await res.json().catch(() => ({error: res.statusText}));
-                throw new Error(`Login failed (${res.status}): ${errorData.error || errorData.violations?.[0]?.message || 'Unknown error'}`);
-            }
-            let data = await res.json();
-            token = data.token;
-            userEmail = address;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Connecting…';
 
-            saveSession(address, token);
+    try {
+        let res = await fetch(`${API}/token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: address, password: MASTER_PASSWORD })
+        });
 
-            document.getElementById('activeUser').innerText = address;
-            document.getElementById('loginView').classList.remove('active');
-            document.getElementById('inboxView').classList.add('active');
-            fetchInbox();
-        } catch(err) {
-            alert(err.message);
+        if (!res.ok) {
+            const errorData = await res.json().catch(() => ({ error: res.statusText }));
+            throw new Error(`Login failed (${res.status}): ${errorData.error || errorData.violations?.[0]?.message || 'Unknown error'}`);
         }
+
+        let data = await res.json();
+        token = data.token;
+        userEmail = address;
+
+        saveSession(address, token);
+
+        document.getElementById('activeUser').innerText = address;
+        document.getElementById('loginView').classList.remove('active');
+        document.getElementById('inboxView').classList.add('active');
+        fetchInbox();
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Access Inbox';
     }
+}
 
     async function fetchInbox() {
         const listDiv = document.getElementById('mailList');
