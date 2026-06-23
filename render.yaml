@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: mail-dashboard
+    env: python
+    plan: free
+    buildCommand: pip install --no-cache-dir -r requirements.txt
+    startCommand: gunicorn --workers 2 --worker-class sync --bind 0.0.0.0:$PORT proxy_server:app
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
